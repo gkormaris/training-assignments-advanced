@@ -180,86 +180,33 @@ public class Sphere extends Mesh {
         Vector3f tempVb = vars.vect2;
         Vector3f tempVc = vars.vect3;
 
-        // generate the sphere itself
-        int i = 0;
-        for (int iZ = 1; iZ < (zSamples - 1); iZ++) {
-            float fAFraction = FastMath.HALF_PI * (-1.0f + fZFactor * iZ); // in (-pi/2, pi/2)
-            float fZFraction;
-            if (useEvenSlices) {
-                fZFraction = -1.0f + fZFactor * iZ; // in (-1, 1)
-            } else {
-                fZFraction = FastMath.sin(fAFraction); // in (-1,1)
-            }
-            float fZ = radius * fZFraction;
-
-            // compute center of slice
-            Vector3f kSliceCenter = tempVb.set(Vector3f.ZERO);
-            kSliceCenter.z += fZ;
-
-            // compute radius of slice
-            float fSliceRadius = FastMath.sqrt(FastMath.abs(radius * radius
-                    - fZ * fZ));
-
-            // compute slice vertices with duplication at end point
-            Vector3f kNormal;
-            int iSave = i;
-            for (int iR = 0; iR < radialSamples; iR++) {
-                float fRadialFraction = iR * fInvRS; // in [0,1)
-                Vector3f kRadial = tempVc.set(afCos[iR], afSin[iR], 0);
-                kRadial.mult(fSliceRadius, tempVa);
-                posBuf.put(kSliceCenter.x + tempVa.x).put(
-                        kSliceCenter.y + tempVa.y).put(
-                        kSliceCenter.z + tempVa.z);
-
-                BufferUtils.populateFromBuffer(tempVa, posBuf, i);
-                kNormal = tempVa;
-                kNormal.normalizeLocal();
-                if (!interior) // allow interior texture vs. exterior
-                {
-                    normBuf.put(kNormal.x).put(kNormal.y).put(
-                            kNormal.z);
-                } else {
-                    normBuf.put(-kNormal.x).put(-kNormal.y).put(
-                            -kNormal.z);
-                }
-
-                if (textureMode == TextureMode.Original) {
-                    texBuf.put(fRadialFraction).put(
-                            0.5f * (fZFraction + 1.0f));
-                } else if (textureMode == TextureMode.Projected) {
-                    texBuf.put(fRadialFraction).put(
-                            FastMath.INV_PI
-                            * (FastMath.HALF_PI + FastMath.asin(fZFraction)));
-                } else if (textureMode == TextureMode.Polar) {
-                    float r = (FastMath.HALF_PI - FastMath.abs(fAFraction)) / FastMath.PI;
-                    float u = r * afCos[iR] + 0.5f;
-                    float v = r * afSin[iR] + 0.5f;
-                    texBuf.put(u).put(v);
-                }
-
-                i++;
-            }
-
-            BufferUtils.copyInternalVector3(posBuf, iSave, i);
-            BufferUtils.copyInternalVector3(normBuf, iSave, i);
-
-            if (textureMode == TextureMode.Original) {
-                texBuf.put(1.0f).put(
-                        0.5f * (fZFraction + 1.0f));
-            } else if (textureMode == TextureMode.Projected) {
-                texBuf.put(1.0f).put(
-                        FastMath.INV_PI
-                        * (FastMath.HALF_PI + FastMath.asin(fZFraction)));
-            } else if (textureMode == TextureMode.Polar) {
-                float r = (FastMath.HALF_PI - FastMath.abs(fAFraction)) / FastMath.PI;
-                texBuf.put(r + 0.5f).put(0.5f);
-            }
-
-            i++;
-        }
-
+        int i = generateSphere(posBuf, normBuf, texBuf, fInvRS, fZFactor, afSin, afCos, tempVa, tempVb, tempVc);
         vars.release();
 
+        updateSouthPole(posBuf, normBuf, texBuf, i);
+        i++;
+        updateNorthPole(posBuf, normBuf, texBuf);
+        updateBound();
+    }
+
+    private void updateNorthPole(FloatBuffer posBuf, FloatBuffer normBuf, FloatBuffer texBuf) {
+        // north pole
+        posBuf.put(0).put(0).put(radius);
+
+        if (!interior) {
+            normBuf.put(0).put(0).put(1);
+        } else {
+            normBuf.put(0).put(0).put(-1);
+        }
+
+        if (textureMode == TextureMode.Polar) {
+            texBuf.put(0.5f).put(0.5f);
+        } else {
+            texBuf.put(0.5f).put(1.0f);
+        }
+    }
+
+    private void updateSouthPole(FloatBuffer posBuf, FloatBuffer normBuf, FloatBuffer texBuf, int i) {
         // south pole
         posBuf.position(i * 3);
         posBuf.put(0f).put(0f).put(-radius);
@@ -280,25 +227,100 @@ public class Sphere extends Mesh {
         } else {
             texBuf.put(0.5f).put(0.0f);
         }
+    }
 
-        i++;
+    private int generateSphere(FloatBuffer posBuf, FloatBuffer normBuf, FloatBuffer texBuf, float fInvRS, float fZFactor, float[] afSin, float[] afCos, Vector3f tempVa, Vector3f tempVb, Vector3f tempVc) {
+        // generate the sphere itself
+        int i = 0;
+        for (int iZ = 1; iZ < (zSamples - 1); iZ++) {
+            float fAFraction = FastMath.HALF_PI * (-1.0f + fZFactor * iZ); // in (-pi/2, pi/2)
+            float fZFraction;
+            if (useEvenSlices) {
+                fZFraction = -1.0f + fZFactor * iZ; // in (-1, 1)
+            } else {
+                fZFraction = FastMath.sin(fAFraction); // in (-1,1)
+            }
+            float fZ = radius * fZFraction;
 
-        // north pole
-        posBuf.put(0).put(0).put(radius);
+            // compute center of slice
+            Vector3f kSliceCenter = tempVb.set(Vector3f.ZERO);
+            kSliceCenter.z += fZ;
 
-        if (!interior) {
-            normBuf.put(0).put(0).put(1);
-        } else {
-            normBuf.put(0).put(0).put(-1);
+            // compute radius of slice
+            float fSliceRadius = FastMath.sqrt(FastMath.abs(radius * radius
+                    - fZ * fZ));
+            i = computeSliceVertices(posBuf, normBuf, texBuf, fInvRS, afSin, afCos, tempVa, tempVc, i, fAFraction, fZFraction, kSliceCenter, fSliceRadius);
+
+
+            updateTextBuf(texBuf, fAFraction, fZFraction);
+
+            i++;
+        }
+        return i;
+    }
+
+    private void updateTextBuf(FloatBuffer texBuf, float fAFraction, float fZFraction) {
+        if (textureMode == TextureMode.Original) {
+            texBuf.put(1.0f).put(
+                    0.5f * (fZFraction + 1.0f));
+        } else if (textureMode == TextureMode.Projected) {
+            texBuf.put(1.0f).put(
+                    FastMath.INV_PI
+                    * (FastMath.HALF_PI + FastMath.asin(fZFraction)));
+        } else if (textureMode == TextureMode.Polar) {
+            float r = (FastMath.HALF_PI - FastMath.abs(fAFraction)) / FastMath.PI;
+            texBuf.put(r + 0.5f).put(0.5f);
+        }
+    }
+
+    private int computeSliceVertices(FloatBuffer posBuf, FloatBuffer normBuf, FloatBuffer texBuf, float fInvRS, float[] afSin, float[] afCos, Vector3f tempVa, Vector3f tempVc, int i, float fAFraction, float fZFraction, Vector3f kSliceCenter, float fSliceRadius) {
+        // compute slice vertices with duplication at end point
+        Vector3f kNormal;
+        int iSave = i;
+        for (int iR = 0; iR < radialSamples; iR++) {
+            float fRadialFraction = iR * fInvRS; // in [0,1)
+            Vector3f kRadial = tempVc.set(afCos[iR], afSin[iR], 0);
+            kRadial.mult(fSliceRadius, tempVa);
+            posBuf.put(kSliceCenter.x + tempVa.x).put(
+                    kSliceCenter.y + tempVa.y).put(
+                    kSliceCenter.z + tempVa.z);
+
+            BufferUtils.populateFromBuffer(tempVa, posBuf, i);
+            kNormal = tempVa;
+            kNormal.normalizeLocal();
+            if (!interior) // allow interior texture vs. exterior
+            {
+                normBuf.put(kNormal.x).put(kNormal.y).put(
+                        kNormal.z);
+            } else {
+                normBuf.put(-kNormal.x).put(-kNormal.y).put(
+                        -kNormal.z);
+            }
+
+            updateTexBufAfterSlice(texBuf, afSin, afCos, fAFraction, fZFraction, iR, fRadialFraction);
+
+            i++;
         }
 
-        if (textureMode == TextureMode.Polar) {
-            texBuf.put(0.5f).put(0.5f);
-        } else {
-            texBuf.put(0.5f).put(1.0f);
-        }
+        BufferUtils.copyInternalVector3(posBuf, iSave, i);
+        BufferUtils.copyInternalVector3(normBuf, iSave, i);
+        return i;
+    }
 
-        updateBound();
+    private void updateTexBufAfterSlice(FloatBuffer texBuf, float[] afSin, float[] afCos, float fAFraction, float fZFraction, int iR, float fRadialFraction) {
+        if (textureMode == TextureMode.Original) {
+            texBuf.put(fRadialFraction).put(
+                    0.5f * (fZFraction + 1.0f));
+        } else if (textureMode == TextureMode.Projected) {
+            texBuf.put(fRadialFraction).put(
+                    FastMath.INV_PI
+                    * (FastMath.HALF_PI + FastMath.asin(fZFraction)));
+        } else if (textureMode == TextureMode.Polar) {
+            float r = (FastMath.HALF_PI - FastMath.abs(fAFraction)) / FastMath.PI;
+            float u = r * afCos[iR] + 0.5f;
+            float v = r * afSin[iR] + 0.5f;
+            texBuf.put(u).put(v);
+        }
     }
 
     /**
