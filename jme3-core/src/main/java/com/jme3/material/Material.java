@@ -72,7 +72,7 @@ import java.util.logging.Logger;
  *
  * @author Kirill Vainer
  */
-public class Material implements CloneableSmartAsset, Cloneable, Savable {
+public class Material implements MaterialIF, CloneableSmartAsset, Cloneable, Savable {
 
     // Version #2: Fixed issue with RenderState.apply*** flags not getting exported
     public static final int SAVABLE_VERSION = 2;
@@ -129,6 +129,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
     /**
      * @return the name of the material (not the same as the asset name), the returned value can be null
      */
+    @Override
     public String getName() {
         return name;
     }
@@ -147,6 +148,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
         this.key = key;
     }
 
+    @Override
     public AssetKey getKey() {
         return key;
     }
@@ -328,6 +330,7 @@ public class Material implements CloneableSmartAsset, Cloneable, Savable {
      * @return True if the transparent value marker is set on this material.
      * @see #setTransparent(boolean)
      */
+    @Override
     public boolean isTransparent() {
         return transparent;
     }
