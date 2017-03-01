@@ -116,13 +116,13 @@ public abstract class AbstractShadowRenderer implements SceneProcessor, Savable 
      * fade shadows at distance
      */
     protected float zFarOverride = 0;
-    protected Vector2f fadeInfo;
-    protected float fadeLength;
     protected Camera frustumCam;
     /**
      * true to skip the post pass when there are no shadow casters
      */
     protected boolean skipPostPass;
+
+    protected Shadow shadow;
     
     /**
      * used for serialization
@@ -640,7 +640,7 @@ public abstract class AbstractShadowRenderer implements SceneProcessor, Savable 
             }
         }
     }
-    
+
     /**
      * Define the length over which the shadow will fade out when using a
      * shadowZextend This is useful to make dynamic shadows fade into baked
@@ -649,19 +649,7 @@ public abstract class AbstractShadowRenderer implements SceneProcessor, Savable 
      * @param length the fade length in world units
      */
     public void setShadowZFadeLength(float length) {
-        if (length == 0) {
-            fadeInfo = null;
-            fadeLength = 0;
-            postshadowMat.clearParam("FadeInfo");
-        } else {
-            if (zFarOverride == 0) {
-                fadeInfo = new Vector2f(0, 0);
-            } else {
-                fadeInfo = new Vector2f(zFarOverride - length, 1.0f / length);
-            }
-            fadeLength = length;
-            postshadowMat.setVector2("FadeInfo", fadeInfo);
-        }
+        shadow.setShadowZFadeLength(length);
     }
 
     /**
@@ -671,10 +659,7 @@ public abstract class AbstractShadowRenderer implements SceneProcessor, Savable 
      * @return the fade length in world units
      */
     public float getShadowZFadeLength() {
-        if (fadeInfo != null) {
-            return zFarOverride - fadeInfo.x;
-        }
-        return 0f;
+        shadow.getShadowZFadeLength();
     }
     
     /**

@@ -171,11 +171,11 @@ public class PssmShadowRenderer implements SceneProcessor {
     //a list of material of the post shadow queue geometries.
     protected List<Material> matCache = new ArrayList<Material>();
     //Holding the info for fading shadows in the far distance 
-    protected Vector2f fadeInfo;
-    protected float fadeLength;
+
     protected boolean applyFadeInfo = false;
 
     protected GeometryList lightReceivers = new GeometryList(new OpaqueComparator());
+    protected Shadow shadow;
     
     /**
      * Create a PSSM Shadow Renderer More info on the technique at <a
@@ -251,7 +251,7 @@ public class PssmShadowRenderer implements SceneProcessor {
         for (int i = 0; i < points.length; i++) {
             points[i] = new Vector3f();
         }
-
+        Shadow shadow = new Shadow();
     }
 
     /**
@@ -710,19 +710,7 @@ public class PssmShadowRenderer implements SceneProcessor {
      * @param length the fade length in world units
      */
     public void setShadowZFadeLength(float length) {
-        if (length == 0) {
-            fadeInfo = null;
-            fadeLength = 0;
-            postshadowMat.clearParam("FadeInfo");
-        } else {
-            if (zFarOverride == 0) {
-                fadeInfo = new Vector2f(0, 0);
-            } else {
-                fadeInfo = new Vector2f(zFarOverride - length, 1.0f / length);
-            }
-            fadeLength = length;
-            postshadowMat.setVector2("FadeInfo", fadeInfo);
-        }
+        shadow.setShadowZFadeLength(length);
     }
 
     /**
@@ -732,9 +720,6 @@ public class PssmShadowRenderer implements SceneProcessor {
      * @return the fade length in world units
      */
     public float getShadowZFadeLength() {
-        if (fadeInfo != null) {
-            return zFarOverride - fadeInfo.x;
-        }
-        return 0f;
+       shadow.getShadowZFadeLength();
     }
 }
