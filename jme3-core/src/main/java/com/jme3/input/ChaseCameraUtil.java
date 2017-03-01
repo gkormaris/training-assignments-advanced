@@ -1,3 +1,5 @@
+package com.jme3.input;
+
 public class ChaseCameraUtil {
 
     private ChaseCamera chaseCamera;
